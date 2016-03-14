@@ -19,9 +19,9 @@ category = 'wind'
 fcdir = 'RE-Europe_dataset_package/Nodal_FC'
 fcfilename = 'wind_forecast.csv'
 tsdir = 'RE-Europe_dataset_package/Nodal_TS'
-tsfilename = 'wind_signal_COSMO_2mnths.csv'
+tsfilename = 'wind_signal_COSMO.csv'
 
-fcdirlist = sorted(os.listdir(fcdir))[:100]
+fcdirlist = sorted(os.listdir(fcdir))[:1000]
 
 tsfile = pd.read_csv(os.path.join(tsdir, tsfilename), index_col=0, parse_dates=True)
 
@@ -52,7 +52,7 @@ final_panel['err'] = final_panel.fc.subtract(final_panel.ts)
 final_panel = final_panel.transpose(3, 0, 1, 2)
 
 store = pd.HDFStore('TSVault.h5')
-store['nodes'] = 'n' + pd.DataFrame(final_panel.labels)
+store['nodes'] = 'n' + pd.Series(final_panel.labels)
 store['categories'] = pd.Series(['wind', 'solar'])
 store['tstypes'] = pd.Series(final_panel.items)
 for node, pan in final_panel.iteritems():
