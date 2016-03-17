@@ -22,16 +22,17 @@ def get_beta_params(mean, variance):
 
 CATEGORY = 'wind'
 FCNAME = 'fc'
-ERRNAME = 'err'
+# ERRNAME = 'err'
 OBSNAME = 'ts'
 TESTNODE = 1069
 TESTDELTA = '2d 3h'
+MIN_VARIANCE = 0.0001
 
 store = pd.HDFStore('TSVault.h5')
 nodes = store['nodes']
 
 fcdf = store['/'.join((CATEGORY, FCNAME, nodes[TESTNODE]))]
-errdf = store['/'.join((CATEGORY, ERRNAME, nodes[TESTNODE]))]
+# errdf = store['/'.join((CATEGORY, ERRNAME, nodes[TESTNODE]))]
 obsdf = store['/'.join((CATEGORY, OBSNAME, nodes[TESTNODE]))]
 store.close()
 
@@ -48,9 +49,12 @@ gammas = np.logspace(1,3,21)
 # Pull out each node's DF's seperately.
 # Save the coefficients of the polynomial fit.
 # Q: Use logs or direct numbers?
-errc = errdf[TESTDELTA]
+# errc = errdf[TESTDELTA]
 fcc = fcdf[TESTDELTA]
 obsc = obsdf[TESTDELTA]
+
+obsc = obsc.dropna()
+fcc = fcc.ix[obsc.index]
 
 # Fitting mean production
 kreg.fit(fcc.values.reshape(-1,1), obsc)
@@ -73,3 +77,4 @@ varpolycoeff = np.polyfit(testx, kreg.predict(testx.reshape(-1,1)),4)
 
 #TEST: Get values of the std that we can plot
 testvar = np.polyval(varpolycoeff, testx)
+testvar = np.where(testvar > MIN_VARIANCE, testvar, MIN_VARIANCE)
