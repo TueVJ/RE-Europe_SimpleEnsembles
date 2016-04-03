@@ -28,28 +28,24 @@ TESTNODE = 1069
 TESTDELTA = '2d 3h'
 MIN_VARIANCE = 0.0001
 
-store = pd.HDFStore('TSVault.h5')
-nodes = store['nodes']
-
-fcdf = store['/'.join((CATEGORY, FCNAME, nodes[TESTNODE]))]
-# errdf = store['/'.join((CATEGORY, ERRNAME, nodes[TESTNODE]))]
-obsdf = store['/'.join((CATEGORY, OBSNAME, nodes[TESTNODE]))]
-store.close()
-
 kreg = KernelRegression()
 testx = np.linspace(0,1,1001)
 
 # Possible gammas
 gammas = np.logspace(1,3,21)
 
-# outlist = []
+store = pd.HDFStore('TSVault.h5')
+nodes = store['nodes']
+
+fcdf = store['/'.join((CATEGORY, FCNAME, nodes[TESTNODE]))]
+obsdf = store['/'.join((CATEGORY, OBSNAME, nodes[TESTNODE]))]
+store.close()
+
+
 # for fcc, obsc in zip(fcdf, obsdf):
-# 
 
 # Pull out each node's DF's seperately.
 # Save the coefficients of the polynomial fit.
-# Q: Use logs or direct numbers?
-# errc = errdf[TESTDELTA]
 fcc = fcdf[TESTDELTA]
 obsc = obsdf[TESTDELTA]
 
