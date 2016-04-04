@@ -28,6 +28,8 @@ tsfile = pd.read_csv(os.path.join(tsdir, tsfilename), index_col=0, parse_dates=T
 store = pd.HDFStore('TSVault.h5')
 nodes = 'n' + tsfile.columns
 store['tstypes'] = pd.Series(['fc', 'obs'])
+store['nodes'] = pd.Series(nodes)
+raise SystemExit
 out_panel4d = {}
 
 i=0

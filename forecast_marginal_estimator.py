@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import os
 from kernel_regression import KernelRegression
+from itertools import izip
 
 __copyright__ = "Copyright 2016, Tue Vissing Jensen"
 __credits__ = ["Tue Vissing Jensen"]
@@ -22,7 +23,6 @@ def get_beta_params(mean, variance):
 
 CATEGORY = 'wind'
 FCNAME = 'fc'
-# ERRNAME = 'err'
 OBSNAME = 'ts'
 TESTNODE = 1069
 TESTDELTA = '2d 3h'
@@ -32,45 +32,55 @@ kreg = KernelRegression()
 testx = np.linspace(0,1,1001)
 
 # Possible gammas
-gammas = np.logspace(1,3,21)
+gammas = np.logspace(1,4, 31)
+TEST_GAMMA = 794 # Given by median optimized gamma over k's for first node
+kreg.gamma = TEST_GAMMA
 
 store = pd.HDFStore('TSVault.h5')
 nodes = store['nodes']
-
-fcdf = store['/'.join((CATEGORY, FCNAME, nodes[TESTNODE]))]
-obsdf = store['/'.join((CATEGORY, OBSNAME, nodes[TESTNODE]))]
 store.close()
 
+# optimal_gammas = []
+outdict = {}
+# for node in nodes:
+for node in nodes[TESTNODE:TESTNODE+1]:
+    print node
+    store = pd.HDFStore('TSVault.h5')
+    fcdf = store['/'.join((CATEGORY, FCNAME, node))]
+    obsdf = store['/'.join((CATEGORY, OBSNAME, node))]
+    store.close()
+    outdict[node] = {}
+    # Pull out each node's DF's seperately.
+    for (k1, fcc), (k2, obsc) in izip(fcdf.iteritems(), obsdf.iteritems()):
+        print k1
+        obsc = obsc.dropna()
+        fcc = fcc.ix[obsc.index]
 
-# for fcc, obsc in zip(fcdf, obsdf):
+        # Fitting mean production
+        kreg.fit(fcc.values.reshape(-1,1), obsc)
+        # Select optimal bandwidth
+        # kreg.gamma = kreg._optimize_gamma(gammas)
+        # optimal_gammas.append(kreg.gamma)
+        # Get polynomial fit for mean production
+        meanpolycoeff = np.polyfit(testx, kreg.predict(testx.reshape(-1,1)),4)
 
-# Pull out each node's DF's seperately.
-# Save the coefficients of the polynomial fit.
-fcc = fcdf[TESTDELTA]
-obsc = obsdf[TESTDELTA]
+        # Get mean predictions
+        prediction = np.polyval(meanpolycoeff, fcc)
+        # Calculate errors squared
+        err2 = (prediction - obsc)**2
+        # Fit variance curve
+        kreg.fit(fcc.values.reshape(-1,1), err2)
+        # Select optimal bandwidth
+        # kreg.gamma = kreg._optimize_gamma(gammas)
+        # Get coefficients of polynomial fit
+        varpolycoeff = np.polyfit(testx, kreg.predict(testx.reshape(-1,1)),4) 
+        # Save the coefficients of the polynomial fit.
+        outdict[node][k1] = {'mean': meanpolycoeff, 'var': varpolycoeff}
+        
 
-obsc = obsc.dropna()
-fcc = fcc.ix[obsc.index]
+# #TEST: Get values of the  mean that we can plot
+# testmean = np.polyval(meanpolycoeff, testx)
 
-# Fitting mean production
-kreg.fit(fcc.values.reshape(-1,1), obsc)
-# Select optimal bandwidth
-kreg.gamma = kreg._optimize_gamma(gammas)
-# Get polynomial fit for mean production
-meanpolycoeff = np.polyfit(testx, kreg.predict(testx.reshape(-1,1)),4) 
-
-#TEST: Get values of the  mean that we can plot
-testmean = np.polyval(meanpolycoeff, testx)
-
-# Get mean predictions
-prediction = np.polyval(meanpolycoeff, fcc)
-# Calculate errors squared
-err2 = (prediction - obsc)**2
-# Fitting errors
-kreg.fit(fcc.values.reshape(-1,1), err2)
-# Get coefficients of polynomial fit
-varpolycoeff = np.polyfit(testx, kreg.predict(testx.reshape(-1,1)),4) 
-
-#TEST: Get values of the std that we can plot
-testvar = np.polyval(varpolycoeff, testx)
-testvar = np.where(testvar > MIN_VARIANCE, testvar, MIN_VARIANCE)
+# #TEST: Get values of the std that we can plot
+# testvar = np.polyval(varpolycoeff, testx)
+# testvar = np.where(testvar > MIN_VARIANCE, testvar, MIN_VARIANCE)
