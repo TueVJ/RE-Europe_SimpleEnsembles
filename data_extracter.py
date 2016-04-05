@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" Extracts RES-Europe data to examine forecasting issues.
+""" Extracts RES-Europe data to build forecasts.
 """
 
 import pandas as pd
@@ -12,7 +12,6 @@ __version__ = "1.0"
 __maintainer__ = "Tue Vissing Jensen"
 __email__ = "tvjens@elektro.dtu.dk"
 __status__ = "Prototype"
-
 
 
 category = 'wind'
@@ -29,10 +28,9 @@ store = pd.HDFStore('TSVault.h5')
 nodes = ['n' + i for i in tsfile.columns]
 store['tstypes'] = pd.Series(['fc', 'obs'])
 store['nodes'] = pd.Series(nodes)
-raise SystemExit
 out_panel4d = {}
 
-i=0
+i = 0
 for one_fc in fcdirlist:
     try:
         fcfile = pd.read_csv(os.path.join(fcdir, one_fc, fcfilename), index_col=0, parse_dates=True)
@@ -79,21 +77,3 @@ for node, pan in final_panel.iteritems():
         except KeyError:
             store[key] = df
 store.close()
-
-
-# # Adding error column
-# # Order: {fc, ts, error},{Forecast from},{Lookahead time},{Node}
-# final_panel = final_panel.transpose(1, 0, 2, 3)
-# final_panel['err'] = final_panel.fc.subtract(final_panel.ts)
-
-# # Order: {Node},{fc, ts, error},{Lookahead time},{Forecast from}
-# final_panel = final_panel.transpose(3, 0, 1, 2)
-
-# store = pd.HDFStore('TSVault.h5')
-# store['nodes'] = 'n' + pd.Series(final_panel.labels)
-# store['categories'] = pd.Series(['wind', 'solar'])
-# store['tstypes'] = pd.Series(final_panel.items)
-# for node, pan in final_panel.iteritems():
-#     for tstype, df in pan.iteritems():
-#         store['/'.join((category, str(tstype), 'n' + str(node)))] = df
-# store.close()
