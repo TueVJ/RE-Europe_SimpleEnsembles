@@ -26,6 +26,6 @@ cov = store['/'.join((category, 'empirical'))]
 store.close()
 
 # Generate 100 samples with marginal normal distribution and the measured covariance.
-vs = np.random.multivariate_normal([0]*len(cov), cov.values, 100)
+vs = pd.DataFrame(np.random.multivariate_normal([0]*len(cov), cov.values, 100), columns=cov.columns)
 # Convert these samples to uniformly distributed values
 unfvs = norm.cdf(vs)
