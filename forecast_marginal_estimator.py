@@ -16,6 +16,7 @@ __maintainer__ = "Tue Vissing Jensen"
 __email__ = "tvjens@elektro.dtu.dk"
 __status__ = "Prototype"
 
+
 def get_beta_params(mean, variance):
     alpha = mean*(mean*(1-mean)/variance - 1)
     beta = (1-mean)*(mean*(1-mean)/variance - 1)
@@ -28,6 +29,7 @@ TESTNODE = 1069
 TESTDELTA = '2d 3h'
 MIN_VARIANCE = 0.0001
 TSVAULTFILE = 'data/TSVault.h5'
+AUTOSCALE = True
 
 kreg = KernelRegression()
 testx = np.linspace(0, 1, 101)
@@ -44,20 +46,27 @@ store.close()
 # optimal_gammas = []
 outmeandict = {}
 outvardict = {}
-# for node in nodes:
-for node in nodes[TESTNODE:TESTNODE+1]:
+scalefactors = {}
+for node in nodes:
     print node
     store = pd.HDFStore(TSVAULTFILE)
     fcdf = store['/'.join((CATEGORY, FCNAME, node))]
     obsdf = store['/'.join((CATEGORY, OBSNAME, node))]
     store.close()
+
+    if AUTOSCALE:
+        scalefactor = max((1.0, obsdf.max().max(), fcdf.max().max()))
+    else:
+        scalefactor = 1.0
+    scalefactors[node] = scalefactor
+
     outmeandict[node] = {}
     outvardict[node] = {}
     # Pull out each node's DF's seperately.
     for (k1, fcc), (k2, obsc) in izip(fcdf.iteritems(), obsdf.iteritems()):
-        print k1
-        obsc = obsc.dropna()
-        fcc = fcc.ix[obsc.index]
+        # print k1
+        obsc = obsc.dropna()/scalefactor
+        fcc = fcc.ix[obsc.index]/scalefactor
 
         # Kernelregression Forecasted => mean
         kreg.fit(fcc.values.reshape(-1, 1), obsc)
@@ -86,9 +95,21 @@ for node in nodes[TESTNODE:TESTNODE+1]:
         # testvar = np.polyval(varpolycoeff, testx)
         outvardict[node][k1] = varpredict
 
-# #TEST: Get values of the  mean that we can plot
-# testmean = np.polyval(meanpolycoeff, testx)
+ks = fcdf.columns
+intnodes = nodes.map(lambda x: int(x[1:]))
+meanpanel = pd.Panel(items=intnodes, major_axis=ks, minor_axis=testx, data=[[outmeandict[n][k] for k in ks] for n in nodes])
+varpanel = pd.Panel(items=intnodes, major_axis=ks, minor_axis=testx, data=[[outvardict[n][k] for k in ks] for n in nodes])
 
-# #TEST: Get values of the std that we can plot
-# testvar = np.polyval(varpolycoeff, testx)
-# testvar = np.where(testvar > MIN_VARIANCE, testvar, MIN_VARIANCE)
+meanpanel.major_axis = [pd.Timedelta(x) for x in meanpanel.major_axis]
+varpanel.major_axis = [pd.Timedelta(x) for x in varpanel.major_axis]
+
+cpanel = meanpanel.multiply(1-meanpanel).divide(varpanel) - 1
+alphapanel = meanpanel.multiply(cpanel)
+betapanel = (1-meanpanel).multiply(cpanel)
+
+store = pd.HDFStore('data/marginalstore.h5')
+store['/'.join(category, 'mean')] = meanpanel
+store['/'.join(category, 'var')] = varpanel
+store['/'.join(category, 'alpha')] = alphapanel
+store['/'.join(category, 'beta')] = betapanel
+store.close()
