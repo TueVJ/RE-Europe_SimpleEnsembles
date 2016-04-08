@@ -25,8 +25,8 @@ fcdirlist = sorted(os.listdir(fcdir))
 tsfile = pd.read_csv(os.path.join(tsdir, tsfilename), index_col=0, parse_dates=True)
 
 store = pd.HDFStore('data/TSVault.h5')
-nodes = ['n' + i for i in tsfile.columns]
 store['tstypes'] = pd.Series(['fc', 'obs'])
+nodes = ['n' + i for i in tsfile.columns]
 store['nodes'] = pd.Series(nodes)
 out_panel4d = {}
 
@@ -44,6 +44,7 @@ for one_fc in fcdirlist:
     except IndexError:
         # We've run out of indices, break here.
         break
+    # Intermediate saving, avoid memory errors
     i += 1
     if i % 100 == 0:
         print 'Saving at {0}'.format(fcfrom)
