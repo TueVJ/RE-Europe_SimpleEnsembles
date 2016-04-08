@@ -108,8 +108,8 @@ alphapanel = meanpanel.multiply(cpanel)
 betapanel = (1-meanpanel).multiply(cpanel)
 
 store = pd.HDFStore('data/marginalstore.h5')
-store['/'.join(category, 'mean')] = meanpanel
-store['/'.join(category, 'var')] = varpanel
-store['/'.join(category, 'alpha')] = alphapanel
-store['/'.join(category, 'beta')] = betapanel
+store['/'.join((CATEGORY, 'mean'))] = meanpanel
+store['/'.join((CATEGORY, 'var'))] = varpanel
+store['/'.join((CATEGORY, 'alpha'))] = alphapanel
+store['/'.join((CATEGORY, 'beta'))] = betapanel
 store.close()
