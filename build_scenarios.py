@@ -18,8 +18,8 @@ __maintainer__ = "Tue Vissing Jensen"
 __email__ = "tvjens@elektro.dtu.dk"
 __status__ = "Prototype"
 
-# category = 'wind'
-category = 'solar'
+category = 'wind'
+# category = 'solar'
 
 store = pd.HDFStore('covariance.h5')
 cov = store['/'.join((category, 'empirical'))]
