@@ -18,26 +18,43 @@ __maintainer__ = "Tue Vissing Jensen"
 __email__ = "tvjens@elektro.dtu.dk"
 __status__ = "Prototype"
 
-category = 'wind'
-# category = 'solar'
-
+CATEGORY = 'wind'
+# CATEGORY = 'solar'
 NUM_SCENARIOS = 100
-scenarios = ['n' + str(i) for i in np.arange(NUM_SCENARIOS)]
+
+
+scenarios = ['s' + str(i) for i in np.arange(NUM_SCENARIOS)]
 store = pd.HDFStore('covariance.h5')
-cov = store['/'.join((category, 'empirical'))]
+cov = store['/'.join((CATEGORY, 'empirical'))]
 store.close()
 
 # Point forecasts [n,k] -> pfc
-# pfcs = # LOAD FROM STORE
+# EXAMPLE: assume 0.5 pfc
+pfcs = pd.DataFrame(data=[[0.5]*2]*len(cov.index), index=cov.index, columns=[pd.Timedelta('1d'), pd.Timedelta('2d')])
 
-for k in ks:
+store = pd.HDFStore('data/marginalstore.h5')
+meanpanel = store['/'.join((CATEGORY, 'mean'))]
+varpanel = store['/'.join((CATEGORY, 'var'))]
+store.close()
+
+outpanel = {}
+for k, pfc in pfcs.iteritems():
     # Generate NUM_SCENARIOS samples with marginal normal distribution and the measured covariance.
-    vs = pd.DataFrame(np.random.multivariate_normal([0]*len(cov), cov.values, NUM_SCENARIOS), columns=cov.columns, index=scenarios)
+    vs = np.random.multivariate_normal([0]*len(cov), cov.values, NUM_SCENARIOS)
     # Convert these samples to uniformly distributed values
-    unfvs = norm.cdf(vs)
+    unfvs = pd.DataFrame(
+        data=norm.cdf(vs),
+        columns=cov.columns,
+        index=scenarios)
+    outpanel[k] = {}
     for n, col in unfvs.iteritems():
+        meancol = meanpanel[n, k]
+        varcol = varpanel[n, k]
+        mean = np.interp(pfc[n], meancol.index, meancol.values)
+        var = np.interp(pfc[n], varcol.index, varcol.values)
         outcol = beta.ppf(
             col,
-            alphapanel[n, k].interp(pfcs[n, k]),
-            betapanel[n, k].interp(pfcs[n, k])
+            mean*(mean*(1-mean)/var - 1),
+            (1 - mean)*(mean*(1-mean)/var - 1)
         )
+        outpanel[k][n] = pd.Series(data=outcol, index=col.index)
