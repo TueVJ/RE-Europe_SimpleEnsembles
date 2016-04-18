@@ -18,8 +18,8 @@ __maintainer__ = "Tue Vissing Jensen"
 __email__ = "tvjens@elektro.dtu.dk"
 __status__ = "Prototype"
 
-CATEGORY = 'wind'
-# CATEGORY = 'solar'
+# CATEGORY = 'wind'
+CATEGORY = 'solar'
 NUM_SCENARIOS = 100
 
 
@@ -28,17 +28,31 @@ store = pd.HDFStore('covariance.h5')
 cov = store['/'.join((CATEGORY, 'empirical'))]
 store.close()
 
+store = pd.HDFStore('data/TSVault.h5')
+windmean = store['windmean']
+solarmean = store['solarmean']
+store.close()
+
+
 # Point forecasts [n,k] -> pfc
 # EXAMPLE: assume 0.5 pfc
-pfcs = pd.DataFrame(data=[[0.5]*2]*len(cov.index), index=cov.index, columns=[pd.Timedelta('1d'), pd.Timedelta('2d')])
+# pfcs = pd.DataFrame(data=np.array([windmean]*2).T, index=cov.index, columns=[pd.Timedelta('1d'), pd.Timedelta('2d')])
+# EXAMPLE: Extract from time series
+tsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/wind_signal_COSMO.csv', index_col=0, parse_dates=True)
+tsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/solar_signal_COSMO.csv', index_col=0, parse_dates=True)
+tsfile.columns = tsfile.columns.astype(int)
+pfcs = tsfile['2013-06-24']
+pfcs.index = pfcs.index - pd.to_datetime('2013-06-23 12:00')
 
 store = pd.HDFStore('data/marginalstore.h5')
 meanpanel = store['/'.join((CATEGORY, 'mean'))]
 varpanel = store['/'.join((CATEGORY, 'var'))]
+scalefactors = store['/'.join((CATEGORY, 'scalefactors'))]
 store.close()
 
 outpanel = {}
-for k, pfc in pfcs.iteritems():
+for k, pfc in pfcs.iterrows():
+    print k
     # Generate NUM_SCENARIOS samples with marginal normal distribution and the measured covariance.
     vs = np.random.multivariate_normal([0]*len(cov), cov.values, NUM_SCENARIOS)
     # Convert these samples to uniformly distributed values
@@ -57,4 +71,11 @@ for k, pfc in pfcs.iteritems():
             mean*(mean*(1-mean)/var - 1),
             (1 - mean)*(mean*(1-mean)/var - 1)
         )
-        outpanel[k][n] = pd.Series(data=outcol, index=col.index)
+        outpanel[k][n] = pd.Series(data=outcol*scalefactors[n], index=col.index)
+
+scenariopanel = pd.Panel(outpanel)
+outscenarios = scenariopanel
+outscenarios.items = outscenarios.items + pd.to_datetime('2013-06-23 12:00')
+store = pd.HDFStore('data/scenariostore.h5')
+store['/'.join(CATEGORY, 'scenarios')] = outscenarios
+store.close()
