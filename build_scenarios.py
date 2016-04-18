@@ -28,22 +28,27 @@ store = pd.HDFStore('covariance.h5')
 cov = store['/'.join((CATEGORY, 'empirical'))]
 store.close()
 
-store = pd.HDFStore('data/TSVault.h5')
-windmean = store['windmean']
-solarmean = store['solarmean']
-store.close()
-
 
 # Point forecasts [n,k] -> pfc
-# EXAMPLE: assume 0.5 pfc
+# EXAMPLE: Use mean as point forecast
+# store = pd.HDFStore('data/TSVault.h5')
+# if CATEGORY == 'wind':
+#     windmean = store['windmean']
+# elif CATEGORY == 'solar':
+#     solarmean = store['solarmean']
+# store.close()
 # pfcs = pd.DataFrame(data=np.array([windmean]*2).T, index=cov.index, columns=[pd.Timedelta('1d'), pd.Timedelta('2d')])
+
 # EXAMPLE: Extract from time series
-tsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/wind_signal_COSMO.csv', index_col=0, parse_dates=True)
-tsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/solar_signal_COSMO.csv', index_col=0, parse_dates=True)
+if CATEGORY == 'wind':
+    tsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/wind_signal_COSMO.csv', index_col=0, parse_dates=True)
+elif CATEGORY == 'solar':
+    tsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/solar_signal_COSMO.csv', index_col=0, parse_dates=True)
 tsfile.columns = tsfile.columns.astype(int)
 pfcs = tsfile['2013-06-24']
 pfcs.index = pfcs.index - pd.to_datetime('2013-06-23 12:00')
 
+# Load marginal distributions
 store = pd.HDFStore('data/marginalstore.h5')
 meanpanel = store['/'.join((CATEGORY, 'mean'))]
 varpanel = store['/'.join((CATEGORY, 'var'))]
