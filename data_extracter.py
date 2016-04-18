@@ -14,11 +14,20 @@ __email__ = "tvjens@elektro.dtu.dk"
 __status__ = "Prototype"
 
 
-category = 'wind'
 fcdir = 'RE-Europe_dataset_package/Nodal_FC'
-fcfilename = 'wind_forecast.csv'
 tsdir = 'RE-Europe_dataset_package/Nodal_TS'
-tsfilename = 'wind_signal_COSMO.csv'
+
+# category = 'wind'
+category = 'solar'
+
+if category == 'wind':
+    fcfilename = 'wind_forecast.csv'
+    tsfilename = 'wind_signal_COSMO.csv'
+elif category == 'solar':
+    fcfilename = 'solar_forecast.csv'
+    tsfilename = 'solar_signal_COSMO.csv'
+else:
+    raise ValueError('Unrecognized category: {0}'.format(category))
 
 fcdirlist = sorted(os.listdir(fcdir))
 
