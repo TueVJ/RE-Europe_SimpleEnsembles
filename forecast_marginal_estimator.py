@@ -23,6 +23,7 @@ def get_beta_params(mean, variance):
     return alpha, beta
 
 CATEGORY = 'wind'
+CATEGORY = 'solar'
 FCNAME = 'fc'
 OBSNAME = 'ts'
 TESTNODE = 1069
@@ -43,7 +44,6 @@ store = pd.HDFStore(TSVAULTFILE)
 nodes = store['nodes']
 store.close()
 
-# optimal_gammas = []
 outmeandict = {}
 outvardict = {}
 scalefactors = {}
@@ -73,9 +73,6 @@ for node in nodes:
         meanpredict = kreg.predict(testx.reshape(-1, 1))
         # Select optimal bandwidth
         # kreg.gamma = kreg._optimize_gamma(gammas)
-        # optimal_gammas.append(kreg.gamma)
-        # Get polynomial fit for mean production
-        # meanpolycoeff = np.polyfit(testx, kreg.predict(testx.reshape(-1, 1)),4)
 
         # Our predicted mean based on point forecast
         # prediction = np.polyval(meanpolycoeff, fcc)
@@ -87,12 +84,8 @@ for node in nodes:
         varpredict = kreg.predict(testx.reshape(-1, 1))
         # Select optimal bandwidth
         # kreg.gamma = kreg._optimize_gamma(gammas)
-        # Get coefficients of polynomial fit
-        # varpolycoeff = np.polyfit(testx, kreg.predict(testx.reshape(-1, 1)), 4)
         # Save the coefficients of the polynomial fit.
-        # outdict[node][k1] = {'mean': meanpolycoeff, 'var': varpolycoeff}
         outmeandict[node][k1] = meanpredict
-        # testvar = np.polyval(varpolycoeff, testx)
         outvardict[node][k1] = varpredict
 
 ks = fcdf.columns
@@ -107,9 +100,12 @@ cpanel = meanpanel.multiply(1-meanpanel).divide(varpanel) - 1
 alphapanel = meanpanel.multiply(cpanel)
 betapanel = (1-meanpanel).multiply(cpanel)
 
+scalefactorseries = pd.Series(scalefactors)
+
 store = pd.HDFStore('data/marginalstore.h5')
 store['/'.join((CATEGORY, 'mean'))] = meanpanel
 store['/'.join((CATEGORY, 'var'))] = varpanel
 store['/'.join((CATEGORY, 'alpha'))] = alphapanel
 store['/'.join((CATEGORY, 'beta'))] = betapanel
+store['/'.join((CATEGORY, 'scalefactors'))] = scalefactorseries
 store.close()
