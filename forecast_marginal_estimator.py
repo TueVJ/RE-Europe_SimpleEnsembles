@@ -100,7 +100,8 @@ cpanel = meanpanel.multiply(1-meanpanel).divide(varpanel) - 1
 alphapanel = meanpanel.multiply(cpanel)
 betapanel = (1-meanpanel).multiply(cpanel)
 
-scalefactorseries = pd.Series(scalefactors)
+scalefactorseries = pd.Series(scalefactors)[nodes]
+scalefactorseries.index = intnodes
 
 store = pd.HDFStore('data/marginalstore.h5')
 store['/'.join((CATEGORY, 'mean'))] = meanpanel
