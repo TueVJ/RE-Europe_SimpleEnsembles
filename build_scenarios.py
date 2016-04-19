@@ -18,12 +18,22 @@ __maintainer__ = "Tue Vissing Jensen"
 __email__ = "tvjens@elektro.dtu.dk"
 __status__ = "Prototype"
 
-# CATEGORY = 'wind'
+CATEGORY = 'wind'
 CATEGORY = 'solar'
 NUM_SCENARIOS = 100
+FORECAST_FROM = '2013-06-23 12:00'
+FORECAST_FOR = '2013-06-24'
 
+
+def parse_date(date):
+    return '{0:04d}{1:02d}{2:02d}{3:02d}'.format(
+        date.year, date.month, date.day, date.hour)
+
+fcdir = parse_date(pd.to_datetime(FORECAST_FROM))
 
 scenarios = ['s' + str(i) for i in np.arange(NUM_SCENARIOS)]
+
+# Load empirical covariance matrix
 store = pd.HDFStore('covariance.h5')
 cov = store['/'.join((CATEGORY, 'empirical'))]
 store.close()
@@ -39,14 +49,28 @@ store.close()
 # store.close()
 # pfcs = pd.DataFrame(data=np.array([windmean]*2).T, index=cov.index, columns=[pd.Timedelta('1d'), pd.Timedelta('2d')])
 
-# EXAMPLE: Extract from time series
+# # EXAMPLE: Extract from time series
+# if CATEGORY == 'wind':
+#     tsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/wind_signal_COSMO.csv', index_col=0, parse_dates=True)
+# elif CATEGORY == 'solar':
+#     tsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/solar_signal_COSMO.csv', index_col=0, parse_dates=True)
+# tsfile.columns = tsfile.columns.astype(int)
+# pfcs = tsfile[FORECAST_FOR]
+# # Pfcs are indexed by time since forecast
+# pfcs.index = pfcs.index - pd.to_datetime(FORECAST_FROM)
+
+# EXAMPLE: Use forecast time series
 if CATEGORY == 'wind':
-    tsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/wind_signal_COSMO.csv', index_col=0, parse_dates=True)
+    tsfile = pd.read_csv(os.path.join('RE-Europe_dataset_package', 'Nodal_FC', fcdir, 'wind_forecast.csv'), index_col=0, parse_dates=True)
 elif CATEGORY == 'solar':
-    tsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/solar_signal_COSMO.csv', index_col=0, parse_dates=True)
+    tsfile = pd.read_csv(os.path.join('RE-Europe_dataset_package', 'Nodal_FC', fcdir, 'solar_forecast.csv'), index_col=0, parse_dates=True)
+else:
+    raise ValueError('Unrecognized category: {0}'.format())
 tsfile.columns = tsfile.columns.astype(int)
-pfcs = tsfile['2013-06-24']
-pfcs.index = pfcs.index - pd.to_datetime('2013-06-23 12:00')
+pfcs = tsfile[FORECAST_FOR]
+# Pfcs are indexed by time since forecast
+pfcs.index = pfcs.index - pd.to_datetime(FORECAST_FROM)
+
 
 # Load marginal distributions
 store = pd.HDFStore('data/marginalstore.h5')
@@ -81,6 +105,30 @@ for k, pfc in pfcs.iterrows():
 scenariopanel = pd.Panel(outpanel)
 outscenarios = scenariopanel
 outscenarios.items = outscenarios.items + pd.to_datetime('2013-06-23 12:00')
+raise SystemExit
 store = pd.HDFStore('data/scenariostore.h5')
-store['/'.join(CATEGORY, 'scenarios')] = outscenarios
+store['/'.join((CATEGORY, 'scenarios'))] = outscenarios
 store.close()
+
+raise SystemExit
+
+# For comparison: Plot point forecast and realized production vs. scenarios
+if CATEGORY == 'wind':
+    obstsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/wind_signal_COSMO.csv', index_col=0, parse_dates=True)
+elif CATEGORY == 'solar':
+    obstsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/solar_signal_COSMO.csv', index_col=0, parse_dates=True)
+obstsfile.columns = obstsfile.columns.astype(int)
+
+
+import matplotlib.pyplot as plt
+plt.ion()
+
+
+plt.figure()
+obstsfile[FORECAST_FOR].mean(axis=1).plot(ls='-', lw=2, c='k', ax=plt.gca(), label='Observed')
+tsfile[FORECAST_FOR].mean(axis=1).plot(ls='--', lw=2, c='k', ax=plt.gca(), label='Point forecast')
+outscenarios.mean(axis=2).quantile(q=0.1, axis=0).plot(ls='-', lw=1, c='k', ax=plt.gca(), label='Scenarios 10% quantile')
+outscenarios.mean(axis=2).quantile(q=0.3, axis=0).plot(ls='-', lw=1, c='k', ax=plt.gca(), label='Scenarios 30% quantile')
+outscenarios.mean(axis=2).quantile(q=0.5, axis=0).plot(ls='-', lw=1, c='k', ax=plt.gca(), label='Scenarios 50% quantile')
+outscenarios.mean(axis=2).quantile(q=0.7, axis=0).plot(ls='-', lw=1, c='k', ax=plt.gca(), label='Scenarios 70% quantile')
+outscenarios.mean(axis=2).quantile(q=0.9, axis=0).plot(ls='-', lw=1, c='k', ax=plt.gca(), label='Scenarios 90% quantile')
