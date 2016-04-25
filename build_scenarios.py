@@ -34,7 +34,7 @@ fcdir = parse_date(pd.to_datetime(FORECAST_FROM))
 scenarios = ['s' + str(i) for i in np.arange(NUM_SCENARIOS)]
 
 # Load empirical covariance matrix
-store = pd.HDFStore('covariance.h5')
+store = pd.HDFStore('data/covariance.h5')
 cov = store['/'.join((CATEGORY, 'empirical'))]
 store.close()
 
@@ -106,7 +106,7 @@ for k, pfc in pfcs.iterrows():
 
 scenariopanel = pd.Panel(outpanel)
 outscenarios = scenariopanel.transpose(1, 0, 2)
-outscenarios.items = outscenarios.items + pd.to_datetime('2013-06-23 12:00')
+outscenarios.major_axis = outscenarios.major_axis + pd.to_datetime('2013-06-23 12:00')
 
 store = pd.HDFStore('data/scenariostore.h5')
 store['/'.join((CATEGORY, 'scenarios'))] = outscenarios

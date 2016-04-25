@@ -33,7 +33,7 @@ cov = normedts.dropna().cov()
 cov.index = cov.index.astype('int64')
 cov.columns = cov.columns.astype('int64')
 
-store = pd.HDFStore('covariance.h5')
+store = pd.HDFStore('data/covariance.h5')
 store['/'.join((category, 'empirical'))] = cov
 store.close()
 
@@ -67,6 +67,6 @@ distdf = pd.DataFrame(index=latlons.index, columns=latlons.index, data=dist)
 direction = latlon_direction(latlons.values[:, None], latlons.values)
 directiondf = pd.DataFrame(index=latlons.index, columns=latlons.index, data=direction)
 
-store = pd.HDFStore('covariance.h5')
+store = pd.HDFStore('data/covariance.h5')
 store['/'.join((category, 'distance'))] = distdf
 store.close()
