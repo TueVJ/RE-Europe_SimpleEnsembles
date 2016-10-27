@@ -29,6 +29,8 @@ tsfile = pd.read_csv(os.path.join(tsdir, tsfilename), index_col=0, parse_dates=T
 # Transform to standard normal distribution quantiles
 normstats = norm.ppf((tsfile.rank(method='first')-0.5)/(len(tsfile)))
 normedts = pd.DataFrame(index=tsfile.index, columns=tsfile.columns, data=normstats)
+
+# Build empirical covariance matrix
 cov = normedts.dropna().cov()
 cov.index = cov.index.astype('int64')
 cov.columns = cov.columns.astype('int64')
@@ -36,6 +38,8 @@ cov.columns = cov.columns.astype('int64')
 store = pd.HDFStore('data/covariance.h5')
 store['/'.join((category, 'empirical'))] = cov
 store.close()
+
+# Build distance matrix for network (Can be used to examine covariance vs. distance.)
 
 
 def spherical_dist(pos1, pos2, r=6371):
