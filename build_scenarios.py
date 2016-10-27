@@ -84,7 +84,7 @@ outpanel = {}
 for k, pfc in pfcs.iterrows():
     print k
     # Generate NUM_SCENARIOS samples with marginal normal distribution and the measured covariance.
-    vs = np.random.multivariate_normal([0]*len(cov), cov.values, NUM_SCENARIOS)
+    vs = np.random.multivariate_normal([0]*len(cov), cov.values, NUM_SCENARIOS, seed=int(k))
     # Convert these samples to uniformly distributed values
     unfvs = pd.DataFrame(
         data=norm.cdf(vs),
@@ -122,6 +122,10 @@ solarobsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/solar_signal_COSM
 solarobs = solarobsfile[FORECAST_FOR]
 loadtsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/load_signal.csv', index_col=0, parse_dates=True)
 loadobs = loadtsfile[FORECAST_FOR]
+
+solarobs.columns = solarobs.columns.astype(int)
+windobs.columns = windobs.columns.astype(int)
+loadobs.columns = loadobs.columns.astype(int)
 
 store = pd.HDFStore('data/scenariostore.h5')
 store['solar/obs'] = solarobs
