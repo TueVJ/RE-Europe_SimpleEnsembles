@@ -18,10 +18,10 @@ __maintainer__ = "Tue Vissing Jensen"
 __email__ = "tvjens@elektro.dtu.dk"
 __status__ = "Prototype"
 
-# category = 'wind'
-# tsfilename = 'wind_signal_COSMO.csv'
-category = 'solar'
-tsfilename = 'solar_signal_COSMO.csv'
+category = 'wind'
+tsfilename = 'wind_signal_COSMO.csv'
+# category = 'solar'
+# tsfilename = 'solar_signal_COSMO.csv'
 tsdir = 'RE-Europe_dataset_package/Nodal_TS'
 
 tsfile = pd.read_csv(os.path.join(tsdir, tsfilename), index_col=0, parse_dates=True)

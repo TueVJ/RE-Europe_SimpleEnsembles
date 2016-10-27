@@ -19,7 +19,7 @@ __email__ = "tvjens@elektro.dtu.dk"
 __status__ = "Prototype"
 
 CATEGORY = 'wind'
-CATEGORY = 'solar'
+# CATEGORY = 'solar'
 NUM_SCENARIOS = 100
 FORECAST_FROM = '2013-06-23 12:00'
 FORECAST_FOR = '2013-06-24'
