@@ -4,10 +4,8 @@
 
 import numpy as np
 import pandas as pd
-import networkx as nx
 import os
 
-from load_network import load_network
 from scipy.stats import norm, beta
 
 __copyright__ = "Copyright 2016, Tue Vissing Jensen"
