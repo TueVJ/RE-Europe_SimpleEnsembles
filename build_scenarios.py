@@ -82,12 +82,13 @@ scalefactors = store['/'.join((CATEGORY, 'scalefactors'))]
 store.close()
 
 RNG = np.random.RandomState()
+MAX_SEED = 2*(2**31-1)+1
 
 outpanel = {}
 for k, pfc in pfcs.iterrows():
     print k
     # Initialize pseudorandom number generator with seed equal timestamp
-    RNG.seed(int(k.to_timedelta64()))
+    RNG.seed(int(k.to_pytimedelta().seconds % MAX_SEED))
     # Generate NUM_SCENARIOS samples with marginal normal distribution and the measured covariance.
     vs = RNG.multivariate_normal([0]*len(cov), cov.values, NUM_SCENARIOS)
     # Convert these samples to uniformly distributed values
