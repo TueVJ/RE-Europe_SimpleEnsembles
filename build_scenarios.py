@@ -18,12 +18,15 @@ __status__ = "Prototype"
 
 CATEGORY = 'wind'
 # CATEGORY = 'solar'
-NUM_SCENARIOS = 100
+NUM_SCENARIOS = 1000
 FORECAST_FROM = '2013-06-23 12:00'
 FORECAST_FOR = '2013-06-24'
 
 
 def parse_date(date):
+    '''
+        Parses dates to the string format used by the RE-Europe data set
+    '''
     return '{0:04d}{1:02d}{2:02d}{3:02d}'.format(
         date.year, date.month, date.day, date.hour)
 
@@ -78,11 +81,15 @@ varpanel = store['/'.join((CATEGORY, 'var'))]
 scalefactors = store['/'.join((CATEGORY, 'scalefactors'))]
 store.close()
 
+RNG = np.random.RandomState()
+
 outpanel = {}
 for k, pfc in pfcs.iterrows():
     print k
+    # Initialize pseudorandom number generator with seed equal timestamp
+    RNG.seed(int(k.to_timedelta64()))
     # Generate NUM_SCENARIOS samples with marginal normal distribution and the measured covariance.
-    vs = np.random.multivariate_normal([0]*len(cov), cov.values, NUM_SCENARIOS, seed=int(k))
+    vs = RNG.multivariate_normal([0]*len(cov), cov.values, NUM_SCENARIOS)
     # Convert these samples to uniformly distributed values
     unfvs = pd.DataFrame(
         data=norm.cdf(vs),
@@ -111,8 +118,6 @@ store['/'.join((CATEGORY, 'scenarios'))] = outscenarios
 store['/'.join((CATEGORY, 'pfcs'))] = tsfile[FORECAST_FOR]
 store.close()
 
-raise SystemExit
-
 # Save observation time series
 windobsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/wind_signal_COSMO.csv', index_col=0, parse_dates=True)
 windobs = windobsfile[FORECAST_FOR]
@@ -132,6 +137,7 @@ store['load/obs'] = loadobs
 store.close()
 
 raise SystemExit
+
 # For comparison: Plot point forecast and realized production vs. scenarios
 if CATEGORY == 'wind':
     obstsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/wind_signal_COSMO.csv', index_col=0, parse_dates=True)
