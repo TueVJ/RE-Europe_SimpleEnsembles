@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" Extracts RES-Europe data to examine forecasting issues.
+""" Extracts RES-Europe data and constructs time-uncoupled forecasts.
 """
 
 import numpy as np
@@ -16,8 +16,8 @@ __maintainer__ = "Tue Vissing Jensen"
 __email__ = "tvjens@elektro.dtu.dk"
 __status__ = "Prototype"
 
-CATEGORY = 'wind'
-# CATEGORY = 'solar'
+# CATEGORY = 'wind'
+CATEGORY = 'solar'
 NUM_SCENARIOS = 1000
 FORECAST_FROM = '2013-06-23 12:00'
 FORECAST_FOR = '2013-06-24'
@@ -30,6 +30,28 @@ def parse_date(date):
     return '{0:04d}{1:02d}{2:02d}{3:02d}'.format(
         date.year, date.month, date.day, date.hour)
 
+
+def convert_index_and_columns(df, dtype=int, convert_index=True, index_dtype=None, convert_columns=True, columns_dtype=None):
+    '''
+        Given a dataframe _df_, convert the dtype of columns and index to the chosen dtype.
+        Bools convert_index and convert_columns set whether to convert these.
+        index_dtype and columns_dtype override the _dtype_ option.
+        dtypes are any accepted by pandas dataframes' df.astype option.
+    '''
+    df = df.copy()
+    if convert_index:
+        if index_dtype is None:
+            df.index = df.index.astype(dtype)
+        else:
+            df.index = df.index.astype(index_dtype)
+    if convert_columns:
+        if columns_dtype is None:
+            df.columns = df.columns.astype(dtype)
+        else:
+            df.columns = df.columns.astype(index_dtype)
+    return df
+
+
 fcdir = parse_date(pd.to_datetime(FORECAST_FROM))
 
 scenarios = ['s' + str(i) for i in np.arange(NUM_SCENARIOS)]
@@ -38,7 +60,7 @@ scenarios = ['s' + str(i) for i in np.arange(NUM_SCENARIOS)]
 store = pd.HDFStore('data/covariance.h5')
 cov = store['/'.join((CATEGORY, 'empirical'))]
 store.close()
-
+cov = convert_index_and_columns(cov)
 
 # Point forecasts [n,k] -> pfc
 # EXAMPLE: Use mean as point forecast
@@ -69,7 +91,7 @@ else:
     raise ValueError('Unrecognized category: {0}'.format())
 tsfile.columns = tsfile.columns.astype(int)
 
-pfcs = tsfile[FORECAST_FOR]
+pfcs = tsfile.ix[FORECAST_FOR]
 # Pfcs are indexed by time since forecast
 pfcs.index = pfcs.index - pd.to_datetime(FORECAST_FROM)
 
@@ -97,6 +119,7 @@ for k, pfc in pfcs.iterrows():
         columns=cov.columns,
         index=scenarios)
     outpanel[k] = {}
+    # Convert uniformly distributed data to beta-distributed data according to marginal distributions
     for n, col in unfvs.iteritems():
         sf = scalefactors[n]
         meancol = meanpanel[n, k]
@@ -111,8 +134,9 @@ for k, pfc in pfcs.iterrows():
         outpanel[k][n] = pd.Series(data=outcol*sf, index=col.index)
 
 scenariopanel = pd.Panel(outpanel)
+# Ordering of output: Scenario Number, Time for which Forecasted, Node
 outscenarios = scenariopanel.transpose(1, 0, 2)
-outscenarios.major_axis = outscenarios.major_axis + pd.to_datetime('2013-06-23 12:00')
+outscenarios.major_axis = outscenarios.major_axis + pd.to_datetime(FORECAST_FROM)
 
 store = pd.HDFStore('data/scenariostore.h5')
 store['/'.join((CATEGORY, 'scenarios'))] = outscenarios
@@ -139,23 +163,3 @@ store.close()
 
 raise SystemExit
 
-# For comparison: Plot point forecast and realized production vs. scenarios
-if CATEGORY == 'wind':
-    obstsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/wind_signal_COSMO.csv', index_col=0, parse_dates=True)
-elif CATEGORY == 'solar':
-    obstsfile = pd.read_csv('RE-Europe_dataset_package/Nodal_TS/solar_signal_COSMO.csv', index_col=0, parse_dates=True)
-obstsfile.columns = obstsfile.columns.astype(int)
-
-
-import matplotlib.pyplot as plt
-plt.ion()
-
-
-plt.figure()
-obstsfile[FORECAST_FOR].mean(axis=1).plot(ls='-', lw=2, c='k', ax=plt.gca(), label='Observed')
-tsfile[FORECAST_FOR].mean(axis=1).plot(ls='--', lw=2, c='k', ax=plt.gca(), label='Point forecast')
-outscenarios.mean(axis=2).T.quantile(q=0.1, axis=0).plot(ls='-', lw=1, c='k', ax=plt.gca(), label='Scenarios 10% quantile')
-outscenarios.mean(axis=2).T.quantile(q=0.3, axis=0).plot(ls='-', lw=1, c='k', ax=plt.gca(), label='Scenarios 30% quantile')
-outscenarios.mean(axis=2).T.quantile(q=0.5, axis=0).plot(ls='-', lw=1, c='k', ax=plt.gca(), label='Scenarios 50% quantile')
-outscenarios.mean(axis=2).T.quantile(q=0.7, axis=0).plot(ls='-', lw=1, c='k', ax=plt.gca(), label='Scenarios 70% quantile')
-outscenarios.mean(axis=2).T.quantile(q=0.9, axis=0).plot(ls='-', lw=1, c='k', ax=plt.gca(), label='Scenarios 90% quantile')
