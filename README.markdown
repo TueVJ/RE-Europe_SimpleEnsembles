@@ -1,4 +1,4 @@
-# RES-Europe scenario generator
+# RE-Europe scenario generator
 
 Generates simple scenarios which are not coupled in time.
 See method.pdf for a description of the method used.
